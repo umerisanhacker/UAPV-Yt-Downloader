@@ -32,7 +32,11 @@ def get_info():
         return jsonify({'error': 'No URL provided'}), 400
 
     try:
-        ydl_opts = {'quiet': True, 'no_warnings': True}
+        ydl_opts = {
+            'quiet': True, 
+            'no_warnings': True,
+            'cookiefile': 'cookies.txt'
+        }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
@@ -121,6 +125,7 @@ def run_download(task_id, url, format_id, file_type):
                 'format': 'bestaudio/best',
                 'outtmpl': os.path.join(downloads_dir, '%(title)s.%(ext)s'),
                 'progress_hooks': [progress_hook],
+                'cookiefile': 'cookies.txt',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -134,6 +139,7 @@ def run_download(task_id, url, format_id, file_type):
                 'outtmpl': os.path.join(downloads_dir, '%(title)s [%(height)sp].%(ext)s'),
                 'merge_output_format': 'mp4',
                 'progress_hooks': [progress_hook],
+                'cookiefile': 'cookies.txt',
                 'concurrent_fragment_downloads': 4,
             }
 
