@@ -32,10 +32,12 @@ def get_info():
         return jsonify({'error': 'No URL provided'}), 400
 
     try:
+        # Strong bypass configuration: Cookies + TV/Android VR client spoofing
         ydl_opts = {
             'quiet': True, 
             'no_warnings': True,
-            'cookiefile': 'cookies.txt'
+            'cookiefile': 'cookies.txt',
+            'extractor_args': {'youtube': {'player_client': ['tv_embedded', 'android_vr']}}
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -126,6 +128,7 @@ def run_download(task_id, url, format_id, file_type):
                 'outtmpl': os.path.join(downloads_dir, '%(title)s.%(ext)s'),
                 'progress_hooks': [progress_hook],
                 'cookiefile': 'cookies.txt',
+                'extractor_args': {'youtube': {'player_client': ['tv_embedded', 'android_vr']}},
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -140,6 +143,7 @@ def run_download(task_id, url, format_id, file_type):
                 'merge_output_format': 'mp4',
                 'progress_hooks': [progress_hook],
                 'cookiefile': 'cookies.txt',
+                'extractor_args': {'youtube': {'player_client': ['tv_embedded', 'android_vr']}},
                 'concurrent_fragment_downloads': 4,
             }
 
