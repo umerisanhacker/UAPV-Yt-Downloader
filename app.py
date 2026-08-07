@@ -2,6 +2,7 @@ import os
 import threading
 import uuid
 import re
+import base64
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import yt_dlp
 
@@ -9,15 +10,22 @@ app = Flask(__name__)
 download_progress = {}
 
 # ==============================================================================
-# 🛡️ THE BULLETPROOF RENDER FIX: REBUILD COOKIES FROM ENVIRONMENT VARIABLE
-# Render deletes local files when the server sleeps. This script reconstructs 
-# your YouTube authentication cookies directly from Render's secure memory 
-# every single time the app boots up, permanently bypassing the IP ban.
+# 🛡️ THE BASE64 COOKIE RECONSTRUCTOR
+# Render destroys file formatting in env vars. This securely decodes a Base64
+# string back into a pristine, perfectly formatted Netscape cookies file in the 
+# /tmp directory (which Render cannot block or corrupt).
 # ==============================================================================
-youtube_cookies_env = os.environ.get('YOUTUBE_COOKIES', '')
-if youtube_cookies_env:
-    with open('cookies.txt', 'w', encoding='utf-8') as f:
-        f.write(youtube_cookies_env.replace('\\n', '\n'))
+COOKIE_PATH = '/tmp/youtube_cookies.txt'
+
+encoded_cookies = os.environ.get('YOUTUBE_COOKIES_B64', '')
+if encoded_cookies:
+    try:
+        decoded_bytes = base64.b64decode(encoded_cookies)
+        with open(COOKIE_PATH, 'wb') as f:
+            f.write(decoded_bytes)
+        print("✅ SUCCESS: Base64 Cookies Decoded and Written.")
+    except Exception as e:
+        print(f"❌ ERROR: Failed to decode Base64 cookies: {e}")
 # ==============================================================================
 
 @app.route('/')
@@ -50,9 +58,9 @@ def get_info():
             }
         }
         
-        # Inject the reconstructed cookies file
-        if os.path.exists('cookies.txt'):
-            ydl_opts['cookiefile'] = 'cookies.txt'
+        # Inject the perfectly reconstructed cookies file
+        if os.path.exists(COOKIE_PATH):
+            ydl_opts['cookiefile'] = COOKIE_PATH
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -143,9 +151,9 @@ def run_download(task_id, url, format_id, file_type):
             }
         }
         
-        # Inject the reconstructed cookies file
-        if os.path.exists('cookies.txt'):
-            ydl_opts['cookiefile'] = 'cookies.txt'
+        # Inject the perfectly reconstructed cookies file
+        if os.path.exists(COOKIE_PATH):
+            ydl_opts['cookiefile'] = COOKIE_PATH
 
         if file_type == 'audio':
             ydl_opts.update({
