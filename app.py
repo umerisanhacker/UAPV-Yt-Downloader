@@ -10,10 +10,7 @@ app = Flask(__name__)
 download_progress = {}
 
 # ==============================================================================
-# 🛡️ THE BASE64 COOKIE RECONSTRUCTOR
-# Render destroys file formatting in env vars. This securely decodes a Base64
-# string back into a pristine, perfectly formatted Netscape cookies file in the 
-# /tmp directory (which Render cannot block or corrupt).
+# 🛡️ COOKIE & PROXY MATRIX
 # ==============================================================================
 COOKIE_PATH = '/tmp/youtube_cookies.txt'
 
@@ -23,10 +20,40 @@ if encoded_cookies:
         decoded_bytes = base64.b64decode(encoded_cookies)
         with open(COOKIE_PATH, 'wb') as f:
             f.write(decoded_bytes)
-        print("✅ SUCCESS: Base64 Cookies Decoded and Written.")
     except Exception as e:
-        print(f"❌ ERROR: Failed to decode Base64 cookies: {e}")
+        print(f"Cookie Decode Error: {e}")
+
+# If you get a residential proxy, put it in the Render Environment Variables
+# Key: PROXY_URL | Value: http://username:password@ip:port
+PROXY_URL = os.environ.get('PROXY_URL', '')
 # ==============================================================================
+
+def get_base_ydl_opts():
+    """Generates the absolute most aggressive anti-bot configuration."""
+    opts = {
+        'quiet': True, 
+        'no_warnings': True,
+        'extract_flat': False,
+        'source_address': '0.0.0.0', # Force IPv4 to bypass some IPv6 datacenter bans
+        'extractor_args': {
+            'youtube': {
+                'player_skip': ['web', 'web_embedded'],
+                'player_client': ['ios', 'android', 'tv_embedded']
+            }
+        },
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
+    }
+    
+    if os.path.exists(COOKIE_PATH):
+        opts['cookiefile'] = COOKIE_PATH
+        
+    if PROXY_URL:
+        opts['proxy'] = PROXY_URL
+        
+    return opts
 
 @app.route('/')
 def index():
@@ -41,26 +68,7 @@ def get_info():
         return jsonify({'error': 'No URL provided'}), 400
 
     try:
-        # AGGRESSIVE BOT BYPASS
-        ydl_opts = {
-            'quiet': True, 
-            'no_warnings': True,
-            'extract_flat': False,
-            'extractor_args': {
-                'youtube': {
-                    'player_skip': ['web', 'web_embedded'],
-                    'player_client': ['android', 'ios', 'tv_embedded']
-                }
-            },
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9',
-            }
-        }
-        
-        # Inject the perfectly reconstructed cookies file
-        if os.path.exists(COOKIE_PATH):
-            ydl_opts['cookiefile'] = COOKIE_PATH
+        ydl_opts = get_base_ydl_opts()
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -82,7 +90,7 @@ def get_info():
                     elif 'vp09' in vcodec: 
                         codec_name = 'VP9 (Standard)'
                     elif 'avc' in vcodec or 'h264' in vcodec: 
-                        codec_name = 'H.264 (Most Compatible)'
+                        codec_name = 'H.264 (Compatible)'
                     else: 
                         codec_name = 'MP4'
 
@@ -91,7 +99,7 @@ def get_info():
                     elif filesize > 1024:
                         size_str = f"{filesize / 1024:.1f} KB"
                     else:
-                        size_str = "Dynamic Size"
+                        size_str = "Dynamic"
 
                     key = (height, int(fps), codec_name)
                     if key not in seen:
@@ -134,26 +142,12 @@ def run_download(task_id, url, format_id, file_type):
             download_progress[task_id] = {'progress': 100.0, 'status': 'processing'}
 
     try:
-        ydl_opts = {
+        ydl_opts = get_base_ydl_opts()
+        ydl_opts.update({
             'outtmpl': os.path.join(downloads_dir, f'%(title)s_{task_id}.%(ext)s'),
             'progress_hooks': [progress_hook],
             'concurrent_fragment_downloads': 6, 
-            'quiet': True,
-            'no_warnings': True,
-            'extractor_args': {
-                'youtube': {
-                    'player_skip': ['web', 'web_embedded'],
-                    'player_client': ['android', 'ios', 'tv_embedded']
-                }
-            },
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-            }
-        }
-        
-        # Inject the perfectly reconstructed cookies file
-        if os.path.exists(COOKIE_PATH):
-            ydl_opts['cookiefile'] = COOKIE_PATH
+        })
 
         if file_type == 'audio':
             ydl_opts.update({
