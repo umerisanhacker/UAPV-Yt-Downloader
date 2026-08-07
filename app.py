@@ -10,7 +10,7 @@ app = Flask(__name__)
 download_progress = {}
 
 # ==============================================================================
-# 🛡️ THE INCOGNITO COOKIE DECODER
+# 🛡️ COOKIE & PROXY MATRIX
 # ==============================================================================
 COOKIE_PATH = '/tmp/youtube_cookies.txt'
 
@@ -20,12 +20,10 @@ if encoded_cookies:
         decoded_bytes = base64.b64decode(encoded_cookies)
         with open(COOKIE_PATH, 'wb') as f:
             f.write(decoded_bytes)
-        print("✅ SUCCESS: Base64 Cookies Decoded and Written to /tmp")
     except Exception as e:
-        print(f"❌ ERROR: Failed to decode Base64 cookies: {e}")
-else:
-    print("⚠️ WARNING: No Base64 Cookie found in Environment Variables.")
+        print(f"Cookie Decode Error: {e}")
 
+PROXY_URL = os.environ.get('PROXY_URL', '')
 # ==============================================================================
 
 def get_hardened_ydl_opts():
@@ -36,11 +34,10 @@ def get_hardened_ydl_opts():
         'extract_flat': False,
         'geo_bypass': True,
         'nocheckcertificate': True,
+        'source_address': '0.0.0.0',
         'extractor_args': {
             'youtube': {
-                # Strictly kill the web and TV players
                 'player_skip': ['web', 'web_embedded', 'tv_embedded', 'ios'],
-                # Force the Android App API (Lowest Bot Detection)
                 'player_client': ['android']
             }
         },
@@ -53,11 +50,34 @@ def get_hardened_ydl_opts():
     if os.path.exists(COOKIE_PATH):
         opts['cookiefile'] = COOKIE_PATH
         
+    if PROXY_URL:
+        opts['proxy'] = PROXY_URL
+        
     return opts
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# ==============================================================================
+# 📱 PWA WEB MANIFEST ROUTE (Enables the "Get App" installation)
+# ==============================================================================
+@app.route('/manifest.json')
+def manifest():
+    manifest_data = {
+        "name": "UAPV Downloader Pro",
+        "short_name": "UAPV",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#090d16",
+        "theme_color": "#ff7b00",
+        "icons": [{
+            "src": "https://cdn-icons-png.flaticon.com/512/1384/1384060.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }]
+    }
+    return jsonify(manifest_data)
 
 @app.route('/get-info', methods=['POST'])
 def get_info():
