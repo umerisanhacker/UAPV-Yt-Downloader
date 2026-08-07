@@ -10,7 +10,7 @@ app = Flask(__name__)
 download_progress = {}
 
 # ==============================================================================
-# 🛡️ COOKIE & PROXY MATRIX
+# 🛡️ THE INCOGNITO COOKIE DECODER
 # ==============================================================================
 COOKIE_PATH = '/tmp/youtube_cookies.txt'
 
@@ -20,38 +20,38 @@ if encoded_cookies:
         decoded_bytes = base64.b64decode(encoded_cookies)
         with open(COOKIE_PATH, 'wb') as f:
             f.write(decoded_bytes)
+        print("✅ SUCCESS: Base64 Cookies Decoded and Written to /tmp")
     except Exception as e:
-        print(f"Cookie Decode Error: {e}")
+        print(f"❌ ERROR: Failed to decode Base64 cookies: {e}")
+else:
+    print("⚠️ WARNING: No Base64 Cookie found in Environment Variables.")
 
-# If you get a residential proxy, put it in the Render Environment Variables
-# Key: PROXY_URL | Value: http://username:password@ip:port
-PROXY_URL = os.environ.get('PROXY_URL', '')
 # ==============================================================================
 
-def get_base_ydl_opts():
-    """Generates the absolute most aggressive anti-bot configuration."""
+def get_hardened_ydl_opts():
+    """Forces the Android Client API and disables the heavily guarded Web Player."""
     opts = {
         'quiet': True, 
         'no_warnings': True,
         'extract_flat': False,
-        'source_address': '0.0.0.0', # Force IPv4 to bypass some IPv6 datacenter bans
+        'geo_bypass': True,
+        'nocheckcertificate': True,
         'extractor_args': {
             'youtube': {
-                'player_skip': ['web', 'web_embedded'],
-                'player_client': ['ios', 'android', 'tv_embedded']
+                # Strictly kill the web and TV players
+                'player_skip': ['web', 'web_embedded', 'tv_embedded', 'ios'],
+                # Force the Android App API (Lowest Bot Detection)
+                'player_client': ['android']
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
-            'Accept-Language': 'en-US,en;q=0.9',
+            'User-Agent': 'Dalvik/2.1.0 (Linux; U; Android 11; SM-G998B Build/RP1A.200720.012)',
+            'Accept': '*/*',
         }
     }
     
     if os.path.exists(COOKIE_PATH):
         opts['cookiefile'] = COOKIE_PATH
-        
-    if PROXY_URL:
-        opts['proxy'] = PROXY_URL
         
     return opts
 
@@ -68,7 +68,7 @@ def get_info():
         return jsonify({'error': 'No URL provided'}), 400
 
     try:
-        ydl_opts = get_base_ydl_opts()
+        ydl_opts = get_hardened_ydl_opts()
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -123,7 +123,9 @@ def get_info():
                 'webpage_url': info.get('webpage_url')
             })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        error_msg = str(e)
+        print(f"Extraction Error: {error_msg}")
+        return jsonify({'error': error_msg}), 500
 
 def run_download(task_id, url, format_id, file_type):
     downloads_dir = os.path.join(os.getcwd(), 'downloads')
@@ -142,7 +144,7 @@ def run_download(task_id, url, format_id, file_type):
             download_progress[task_id] = {'progress': 100.0, 'status': 'processing'}
 
     try:
-        ydl_opts = get_base_ydl_opts()
+        ydl_opts = get_hardened_ydl_opts()
         ydl_opts.update({
             'outtmpl': os.path.join(downloads_dir, f'%(title)s_{task_id}.%(ext)s'),
             'progress_hooks': [progress_hook],
