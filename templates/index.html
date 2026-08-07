@@ -3,254 +3,331 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UAPV YouTube Downloader</title>
+    <title>UAPV YouTube Downloader Pro</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0818">
+    
     <style>
-        * { box-sizing: border-box; }
+        :root {
+            --bg-dark: #090d16;
+            --primary: #ff7b00;
+            --primary-hover: #ff4500;
+            --secondary: #0284c7;
+            --secondary-hover: #0369a1;
+            --card-bg: rgba(16, 23, 42, 0.75);
+            --card-border: rgba(255, 123, 0, 0.25);
+            --text-main: #ffffff;
+            --text-muted: #cbd5e1;
+            --glow-orange: 0 0 25px rgba(255, 123, 0, 0.4);
+            --glow-blue: 0 0 25px rgba(2, 132, 199, 0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #090d16;
             overflow-x: hidden;
             position: relative;
+            /* perspective removed from body to fix fixed-background scroll bug */
+            padding-bottom: 100px;
         }
 
-        body::before {
-            content: '';
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            background: linear-gradient(135deg, #ff7b00, #ff4500);
-            top: -100px;
-            left: -100px;
-            border-radius: 50%;
-            filter: blur(120px);
-            opacity: 0.5;
-            z-index: 0;
-        }
+        /* Ultra Immersive Neural Canvas */
+        #neural-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+        .ambient-glow { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2; background: radial-gradient(circle at 20% 30%, rgba(255, 123, 0, 0.08) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(2, 132, 199, 0.1) 0%, transparent 60%); animation: ambientPulse 8s alternate infinite ease-in-out; }
+        @keyframes ambientPulse { 0% { opacity: 0.6; } 100% { opacity: 1; transform: scale(1.05); } }
 
-        body::after {
-            content: '';
-            position: absolute;
-            width: 600px;
-            height: 600px;
-            background: linear-gradient(135deg, #001f3f, #004080);
-            bottom: -150px;
-            right: -150px;
-            border-radius: 50%;
-            filter: blur(140px);
-            opacity: 0.8;
-            z-index: 0;
-        }
+        /* Navigation */
+        nav { width: 100%; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(9, 13, 22, 0.6); backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 12px; transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .brand { font-size: 1.4rem; font-weight: 900; background: linear-gradient(to right, #ff7b00, #ffca28, #0284c7); background-clip: text; -webkit-background-clip: text; color: transparent; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; animation: textShine 4s linear infinite; background-size: 200% auto; }
+        @keyframes textShine { to { background-position: 200% center; } }
+        
+        .nav-links { display: flex; gap: 20px; align-items: center; list-style: none; flex-wrap: wrap; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: color 0.2s, text-shadow 0.2s; cursor: pointer; }
+        .nav-links a:hover { color: #fff; text-shadow: 0 0 10px rgba(255, 123, 0, 0.6); }
 
-        .container {
+        /* Cinematic Wrapper */
+        #main-wrapper { width: 100%; max-width: 1200px; margin: 0 auto; padding: 40px 20px; transition: filter 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); perspective: 1200px; }
+        #main-wrapper.cinematic-blur { transform: scale(0.97); filter: blur(6px) brightness(0.7); pointer-events: none; }
+
+        header { text-align: center; margin-bottom: 50px; animation: fadeDown 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        header h1 { font-size: clamp(2rem, 5vw, 3.8rem); font-weight: 900; letter-spacing: -1px; margin-bottom: 15px; text-shadow: 0 10px 30px rgba(255, 123, 0, 0.3); }
+        header p { color: var(--text-muted); font-size: clamp(1rem, 2vw, 1.15rem); max-width: 700px; margin: 0 auto; line-height: 1.6; }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-40px) scale(0.95); filter: blur(10px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+
+        /* 3D Glassmorphic Downloader Container */
+        .downloader-card {
             position: relative;
-            z-index: 1;
-            background: rgba(16, 23, 42, 0.85);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 123, 0, 0.2);
+            z-index: 10;
+            background: linear-gradient(145deg, rgba(16, 23, 42, 0.85) 0%, rgba(9, 13, 22, 0.95) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
             padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 123, 0, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             width: 100%;
-            max-width: 600px;
+            max-width: 750px;
+            margin: 0 auto 80px auto;
             text-align: center;
-            color: #ffffff;
-        }
-
-        h2 {
-            margin-bottom: 25px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            color: #ffa500;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 14px 16px;
-            font-size: 16px;
-            background: #0b1120;
-            border: 2px solid #1e293b;
-            color: #fff;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-
-        input[type="text"]:focus {
-            border-color: #ff7b00;
-            outline: none;
-            box-shadow: 0 0 10px rgba(255, 123, 0, 0.3);
-        }
-
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 600;
-            background: linear-gradient(135deg, #ff7b00, #ff4500);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 123, 0, 0.4);
-        }
-
-        .action-group {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .btn-reset {
-            background: linear-gradient(135deg, #334155, #1e293b);
-            border: 1px solid #475569;
-        }
-
-        .btn-reset:hover {
-            box-shadow: 0 5px 15px rgba(71, 85, 105, 0.4);
-        }
-
-        .result {
-            margin-top: 25px;
-            text-align: left;
-            border-top: 1px solid #1e293b;
-            padding-top: 20px;
-        }
-
-        .result img {
-            width: 100%;
-            max-height: 250px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-
-        .result h3 {
-            font-size: 18px;
-            margin: 10px 0;
-            color: #f8fafc;
-        }
-
-        .result p {
-            color: #94a3b8;
-            font-size: 14px;
-        }
-
-        label {
-            display: block;
-            margin: 15px 0 8px;
-            font-weight: 500;
-            color: #cbd5e1;
-        }
-
-        select {
-            width: 100%;
-            padding: 12px;
-            background: #0b1120;
-            color: #fff;
-            border: 2px solid #1e293b;
-            border-radius: 8px;
-            font-size: 15px;
-            outline: none;
-            margin-bottom: 20px;
-        }
-
-        select:focus {
-            border-color: #ff7b00;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .btn-audio {
-            background: linear-gradient(135deg, #0284c7, #0369a1);
-        }
-
-        .btn-audio:hover {
-            box-shadow: 0 5px 15px rgba(2, 132, 199, 0.4);
-        }
-
-        .progress-container {
-            margin-top: 20px;
-            text-align: left;
-        }
-
-        .progress-bar-bg {
-            width: 100%;
-            background-color: #0b1120;
-            border: 2px solid #1e293b;
-            border-radius: 8px;
+            transform-style: preserve-3d;
+            transition: transform 0.15s ease-out, border-color 0.4s, box-shadow 0.4s;
+            animation: cardReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
             overflow: hidden;
-            height: 24px;
         }
+        @keyframes cardReveal { 0% { opacity: 0; transform: translateY(50px) scale(0.9) rotateX(15deg); filter: blur(15px); } 100% { opacity: 1; transform: translateY(0) scale(1) rotateX(0deg); filter: blur(0); } }
+        
+        .downloader-card:hover { border-color: rgba(255, 123, 0, 0.5); box-shadow: 0 40px 80px rgba(0,0,0,0.9), var(--glow-orange); }
+        
+        .card-glare { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,0.15) 0%, transparent 60%); opacity: 0; transition: opacity 0.4s; pointer-events: none; z-index: 0; border-radius: 24px; }
+        .downloader-card:hover .card-glare { opacity: 1; }
+        .card-content { transform: translateZ(40px); position: relative; z-index: 2; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .downloader-card:hover .card-content { transform: translateZ(60px); }
 
-        .progress-bar-fill {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #10b981, #22c55e);
-            transition: width 0.3s ease;
+        /* Sexy Inputs & Selects */
+        input[type="text"], select {
+            width: 100%;
+            padding: 18px 24px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            border-radius: 14px;
+            margin-bottom: 24px;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
         }
+        input[type="text"]:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 25px rgba(255, 123, 0, 0.3), inset 0 2px 10px rgba(0,0,0,0.5); transform: scale(1.02); }
+        select { cursor: pointer; appearance: none; }
+        select option { background: #0f172a; color: #fff; font-weight: 600; }
 
-        .progress-text {
-            margin-top: 8px;
-            font-size: 14px;
-            color: #22c55e;
-            font-weight: 500;
-            text-align: center;
-        }
+        /* Spotlight Buttons */
+        button { position: relative; overflow: hidden; padding: 16px 30px; font-size: 1.05rem; font-weight: 800; border: none; border-radius: 14px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 2; color: #fff; }
+        button:active { transform: scale(0.95); }
+        
+        .btn-spotlight::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle 60px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.3), transparent); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1; }
+        .btn-spotlight:hover::before { opacity: 1; }
 
-        .loading {
-            margin-top: 15px;
-            color: #ffa500;
-            font-weight: 500;
-        }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); box-shadow: 0 10px 30px rgba(255, 123, 0, 0.4); width: 100%; max-width: 300px;}
+        .btn-primary:hover { transform: translateY(-4px); box-shadow: 0 15px 40px rgba(255, 123, 0, 0.6); }
+        
+        .btn-reset { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 180px; }
+        .btn-reset:hover { background: rgba(255,255,255,0.1); transform: translateY(-4px); border-color: rgba(255,255,255,0.3); }
+        
+        .btn-audio { background: linear-gradient(135deg, var(--secondary), var(--secondary-hover)); box-shadow: 0 10px 30px rgba(2, 132, 199, 0.4); width: 100%; max-width: 300px;}
+        .btn-audio:hover { transform: translateY(-4px); box-shadow: 0 15px 40px rgba(2, 132, 199, 0.6); }
 
-        .hidden { display: none; }
+        .action-group { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        /* Loading Spinner */
+        .loading { margin-top: 20px; color: var(--primary); font-weight: 800; font-size: 1.15rem; display: flex; flex-direction: column; align-items: center; gap: 15px; animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .spinner { width: 45px; height: 45px; border: 4px solid rgba(255,123,0,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Results Area */
+        .result { margin-top: 30px; text-align: left; padding: 30px; background: rgba(0,0,0,0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); animation: popIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.9) translateY(20px); filter: blur(10px); } to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } }
+        
+        .result img { width: 100%; max-height: 320px; object-fit: cover; border-radius: 14px; margin-bottom: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); transition: transform 0.4s; border: 1px solid rgba(255,255,255,0.1); }
+        .result img:hover { transform: scale(1.02); }
+        
+        .result h3 { font-size: 1.4rem; margin: 10px 0; color: #fff; font-weight: 900; line-height: 1.4; }
+        .result p { color: var(--text-muted); font-size: 1rem; font-weight: 600; margin-bottom: 25px; }
+        label { display: block; margin: 20px 0 12px; font-weight: 800; color: var(--primary); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Animated Progress Bar */
+        .progress-container { margin-top: 30px; text-align: left; background: rgba(0,0,0,0.5); padding: 25px; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.3); box-shadow: inset 0 0 25px rgba(0,0,0,0.6); animation: popIn 0.4s; }
+        .progress-bar-bg { width: 100%; background-color: rgba(255,255,255,0.08); border-radius: 20px; overflow: hidden; height: 20px; border: 1px solid rgba(16, 185, 129, 0.2); position: relative; }
+        .progress-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ff7b00 0%, #ffca28 50%, #ff4500 100%); border-radius: 20px; transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 0 25px rgba(255, 123, 0, 0.8); position: relative; }
+        .progress-bar-fill::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent); animation: shimmer 1s infinite linear; }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        
+        .progress-text { margin-top: 15px; font-size: 1.05rem; color: #ffca28; font-weight: 900; text-align: center; letter-spacing: 0.5px; }
+        .hidden { display: none !important; }
+
+        /* SECTION HEADERS */
+        .section-title { font-size: clamp(1.8rem, 4vw, 2.5rem); font-weight: 900; text-align: center; margin-bottom: 40px; background: linear-gradient(to right, #ffffff, #94a3b8); -webkit-background-clip: text; color: transparent; }
+
+        /* FEATURES GRID (3D TILES) */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; margin-bottom: 80px; perspective: 1200px; }
+        .tool-card { background: linear-gradient(145deg, rgba(16, 23, 42, 0.9) 0%, rgba(9, 13, 22, 0.95) 100%); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; padding: 30px 24px; cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; position: relative; transform-style: preserve-3d; box-shadow: 0 15px 35px rgba(0,0,0,0.5); overflow: hidden; backdrop-filter: blur(15px); transition: border-color 0.4s, box-shadow 0.4s; }
+        .tool-card:hover { border-color: rgba(255, 123, 0, 0.5); box-shadow: 0 30px 60px rgba(0,0,0,0.8), var(--glow-orange); }
+        .tool-card .card-glare { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,0.12) 0%, transparent 60%); opacity: 0; transition: opacity 0.4s; pointer-events: none; z-index: 0; }
+        .tool-card:hover .card-glare { opacity: 1; }
+        .tool-card .card-content { transform: translateZ(30px); pointer-events: none; position: relative; z-index: 2; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .tool-card:hover .card-content { transform: translateZ(50px); }
+        
+        .tile-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; font-size: 1.8rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: inset 0 2px 10px rgba(255,255,255,0.05); transition: transform 0.4s, box-shadow 0.4s, border-color 0.4s; }
+        .tool-card:hover .tile-icon { transform: scale(1.15) translateY(-5px); box-shadow: 0 10px 25px rgba(255, 123, 0, 0.3), inset 0 2px 10px rgba(255,255,255,0.2); border-color: rgba(255, 123, 0, 0.4); }
+        .tool-card h3 { font-size: 1.15rem; margin-bottom: 10px; color: #fff; font-weight: 800; letter-spacing: -0.3px; }
+        .tool-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; }
+
+        /* HARDENED OPAQUE FAQ SECTION */
+        .faq-section { max-width: 900px; margin: 0 auto 60px auto; }
+        .faq-item { background: rgba(16, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; margin-bottom: 16px; overflow: hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(15px); box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        .faq-item:hover { border-color: rgba(2, 132, 199, 0.5); box-shadow: 0 15px 35px rgba(0,0,0,0.6), var(--glow-blue); transform: translateX(5px); }
+        .faq-question { padding: 22px 26px; font-weight: 800; font-size: 1.05rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #fff; user-select: none; transition: color 0.2s; }
+        .faq-question:hover { color: var(--secondary); }
+        .faq-answer { padding: 0 26px 22px 26px; color: var(--text-muted); font-size: 0.95rem; line-height: 1.7; display: none; animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>UAPV YouTube Downloader</h2>
-    <input type="text" id="urlInput" placeholder="Paste YouTube Link Here...">
-    
-    <div class="action-group">
-        <button onclick="fetchVideoInfo()">Fetch Video</button>
-        <button class="btn-reset" onclick="resetApp()">Reset</button>
+<div class="ambient-glow"></div>
+<canvas id="neural-canvas"></canvas>
+
+<nav id="main-nav">
+    <div class="brand">UAPV Downloader</div>
+    <ul class="nav-links">
+        <li><a onclick="document.getElementById('main-card').scrollIntoView({behavior:'smooth'})">Downloader</a></li>
+        <li><a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Features</a></li>
+        <li><a onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})">FAQ</a></li>
+    </ul>
+</nav>
+
+<div id="main-wrapper">
+    <header>
+        <h1>Next-Gen YouTube Extraction</h1>
+        <p>Bypass restrictions, extract pristine audio, and download 4K/8K AV1 formats instantly with our multi-threaded FFmpeg engine.</p>
+    </header>
+
+    <div class="container downloader-card" id="main-card">
+        <div class="card-glare"></div>
+        <div class="card-content">
+            <h2>UAPV Pro Downloader</h2>
+            <input type="text" id="urlInput" placeholder="Paste YouTube Link Here..." autocomplete="off">
+            
+            <div class="action-group">
+                <button class="btn-primary btn-spotlight" onclick="fetchVideoInfo()">Fetch Video Data</button>
+                <button class="btn-reset btn-spotlight" onclick="resetApp()">Reset</button>
+            </div>
+
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <span>Intercepting & processing streams...</span>
+            </div>
+
+            <div id="resultContainer" class="result hidden">
+                <img id="thumbnail" src="" alt="Video Thumbnail">
+                <h3 id="videoTitle"></h3>
+                <p id="videoDuration"></p>
+                
+                <label for="formatSelect">Select Video Quality, FPS & Codec:</label>
+                <select id="formatSelect"></select>
+                
+                <div class="action-group" style="margin-top: 25px;">
+                    <button class="btn-primary btn-spotlight" onclick="startDownload('video')">Download Video (MP4)</button>
+                    <button class="btn-audio btn-spotlight" onclick="startDownload('audio')">Download Audio (MP3)</button>
+                </div>
+
+                <div id="progressContainer" class="progress-container hidden">
+                    <div class="progress-bar-bg">
+                        <div id="progressBar" class="progress-bar-fill"></div>
+                    </div>
+                    <p id="progressText" class="progress-text">Initializing matrix... 0%</p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div id="loading" class="loading hidden">Processing video streams & formats... Please wait.</div>
-
-    <div id="resultContainer" class="result hidden">
-        <img id="thumbnail" src="" alt="Thumbnail">
-        <h3 id="videoTitle"></h3>
-        <p id="videoDuration"></p>
-        
-        <label for="formatSelect">Select Video Quality, FPS & Codec:</label>
-        <select id="formatSelect"></select>
-        
-        <div class="btn-group">
-            <button onclick="startDownload('video')">Download Video (MP4)</button>
-            <button class="btn-audio" onclick="startDownload('audio')">Download Audio (MP3)</button>
-        </div>
-
-        <div id="progressContainer" class="progress-container hidden">
-            <div class="progress-bar-bg">
-                <div id="progressBar" class="progress-bar-fill"></div>
+    <!-- NEW FEATURES GRID SECTION -->
+    <h2 class="section-title" id="features">✨ Pro Extraction Features</h2>
+    <div class="cards-grid">
+        <div class="tool-card">
+            <div class="card-glare"></div><div class="card-content">
+            <div class="tile-icon">🎬</div>
+            <h3>4K & 8K Ultra-HD Support</h3>
+            <p>Download maximum resolution streams natively, fully preserved without compression artifacts.</p>
             </div>
-            <p id="progressText" class="progress-text">Initializing download... 0%</p>
+        </div>
+        <div class="tool-card">
+            <div class="card-glare"></div><div class="card-content">
+            <div class="tile-icon">🎧</div>
+            <h3>Lossless MP3 Extraction</h3>
+            <p>Strip out crystal clear 192kbps to 320kbps audio directly from video streams in seconds.</p>
+            </div>
+        </div>
+        <div class="tool-card">
+            <div class="card-glare"></div><div class="card-content">
+            <div class="tile-icon">⚙️</div>
+            <h3>Smart Codec Selection</h3>
+            <p>Choose between cutting-edge AV1, standard VP9, or universally compatible H.264 formats.</p>
+            </div>
+        </div>
+        <div class="tool-card">
+            <div class="card-glare"></div><div class="card-content">
+            <div class="tile-icon">⚡</div>
+            <h3>Hyper-Threaded Speeds</h3>
+            <p>Concurrent 6-thread fragment downloading maximizes your bandwidth for lightning-fast saves.</p>
+            </div>
+        </div>
+        <div class="tool-card">
+            <div class="card-glare"></div><div class="card-content">
+            <div class="tile-icon">🔓</div>
+            <h3>Advanced Bypass Matrix</h3>
+            <p>Spoofs Android VR and TV clients to safely navigate age restrictions and bot-checks.</p>
+            </div>
+        </div>
+        <div class="tool-card">
+            <div class="card-glare"></div><div class="card-content">
+            <div class="tile-icon">🔄</div>
+            <h3>FFmpeg Auto-Merging</h3>
+            <p>Automatically stitches isolated high-res video and audio streams into a single perfect MP4 file.</p>
+            </div>
+        </div>
+        <div class="tool-card">
+            <div class="card-glare"></div><div class="card-content">
+            <div class="tile-icon">📱</div>
+            <h3>Universal Compatibility</h3>
+            <p>Files are pre-processed to guarantee playback on iOS, Android, Windows, and Mac systems.</p>
+            </div>
+        </div>
+        <div class="tool-card">
+            <div class="card-glare"></div><div class="card-content">
+            <div class="tile-icon">🛡️</div>
+            <h3>100% Secure & Private</h3>
+            <p>Downloads are processed in secure temporary instances and instantly wiped post-transfer.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXPANDED FAQ SECTION -->
+    <h2 class="section-title" id="faq">Frequently Asked Questions</h2>
+    <div class="faq-section">
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Why are some formats split into audio and video? <span>▼</span></div>
+            <div class="faq-answer">YouTube uses Adaptive Bitrate Streaming (DASH) for resolutions 1080p and higher, meaning they store the video and audio tracks separately. Our engine downloads the highest quality version of both and seamlessly merges them together using FFmpeg.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">What is the difference between AV1, VP9, and H.264 codecs? <span>▼</span></div>
+            <div class="faq-answer"><strong>AV1</strong> is the newest, highest-quality format but may not play on older devices. <strong>VP9</strong> is standard for most high-res web video. <strong>H.264 (AVC)</strong> is the most widely compatible format that will play on virtually any television, phone, or computer.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Is there a file size limit? <span>▼</span></div>
+            <div class="faq-answer">Our backend utilizes multi-threaded downloading with 6 concurrent connections. While there is no hard cap, downloading multi-hour 4K documentaries may take a few minutes to process and merge before the download prompt appears.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Can I download private or age-restricted videos? <span>▼</span></div>
+            <div class="faq-answer">Yes, our engine utilizes advanced client spoofing (masking as Android VR and Smart TVs) to bypass standard age gates. However, completely private videos require authorized session cookies which are restricted for public usage.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Why do downloads sometimes hang at "Processing"? <span>▼</span></div>
+            <div class="faq-answer">Once the stream reaches 100%, the FFmpeg engine takes over to merge the heavy video and audio tracks. For a 4K video, this localized stitching process can take 10-30 seconds depending on server load. Do not refresh the page.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Do you store copies of the videos I download? <span>▼</span></div>
+            <div class="faq-answer">No. We respect strict data privacy protocols. Your file is saved to an isolated temporary sandbox during the merge process and is completely wiped from our servers immediately after your download finishes.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Why are WebM formats excluded from the list? <span>▼</span></div>
+            <div class="faq-answer">WebM is an open media container specifically built for web browsers. However, it often fails to play natively on Apple devices (iPhones/Macs) or desktop media players without third-party plugins. We strictly enforce MP4 delivery for maximum compatibility.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">Is it legal to use this tool? <span>▼</span></div>
+            <div class="faq-answer">This tool is intended strictly for creating personal, offline backups of public domain videos, your own content, or content under creative commons. Users are responsible for adhering to local copyright laws and YouTube's Terms of Service.</div>
         </div>
     </div>
 </div>
@@ -258,12 +335,199 @@
 <script>
     let currentUrl = "";
 
+    /* Cinematic Depth UI Logic */
+    function setCinematicBlur(active) {
+        const wrapper = document.getElementById('main-wrapper');
+        const loading = document.getElementById('loading');
+        if (active && !loading.classList.contains('hidden')) { 
+            wrapper.classList.add('cinematic-blur');
+        } else { 
+            wrapper.classList.remove('cinematic-blur');
+        }
+    }
+
+    function toggleFaq(el) { 
+        const a = el.nextElementSibling; 
+        const arrow = el.querySelector('span');
+        if (a.style.display === 'block') {
+            a.style.display = 'none';
+            arrow.innerText = '▼';
+        } else {
+            a.style.display = 'block';
+            arrow.innerText = '▲';
+        }
+    }
+
+    function initSpotlightButtons() { 
+        document.querySelectorAll('.btn-spotlight').forEach(b => {
+            b.addEventListener('mousemove', e => { 
+                const r = b.getBoundingClientRect(); 
+                b.style.setProperty('--mouse-x', `${e.clientX - r.left}px`); 
+                b.style.setProperty('--mouse-y', `${e.clientY - r.top}px`); 
+            }); 
+        }); 
+    }
+
+    /* APPLE-TIER LIQUID LERP 3D HOVER EFFECT */
+    function init3DAppleCards() { 
+        document.querySelectorAll('.downloader-card, .tool-card').forEach(c => { 
+            let bounds, targetX = 0, targetY = 0, currentX = 0, currentY = 0;
+            let hoverActive = false;
+            // The main downloader card has a different scale intensity than the smaller tiles
+            let scaleMax = c.id === 'main-card' ? 1.02 : 1.05;
+
+            c.addEventListener('mouseenter', () => { 
+                bounds = c.getBoundingClientRect(); 
+                hoverActive = true;
+                render(); 
+            });
+            
+            c.addEventListener('mousemove', e => { 
+                const x = e.clientX - bounds.left;
+                const y = e.clientY - bounds.top; 
+                targetX = ((x - bounds.width / 2) / bounds.width) * 12; 
+                targetY = ((y - bounds.height / 2) / bounds.height) * -12; 
+                c.style.setProperty('--gx', `${x}px`); 
+                c.style.setProperty('--gy', `${y}px`); 
+            }); 
+            
+            c.addEventListener('mouseleave', () => {
+                hoverActive = false;
+                targetX = 0; targetY = 0; 
+            }); 
+
+            function render() {
+                currentX += (targetX - currentX) * 0.12; 
+                currentY += (targetY - currentY) * 0.12; 
+                c.style.transform = `rotateY(${currentX}deg) rotateX(${currentY}deg) scale3d(${hoverActive ? scaleMax : 1}, ${hoverActive ? scaleMax : 1}, ${scaleMax})`;
+                
+                if (hoverActive || Math.abs(currentX) > 0.01 || Math.abs(currentY) > 0.01) {
+                    requestAnimationFrame(render);
+                } else {
+                    c.style.transform = 'none';
+                }
+            }
+        }); 
+    }
+
+    /* ULTIMATE IMMERSIVE NEURAL PHYSICS ENGINE (Orange/Blue Theme) */
+    function initCanvasMesh() {
+        const canvas = document.getElementById('neural-canvas'); 
+        const ctx = canvas.getContext('2d');
+        let w, h, particles = [];
+        let mouse = { x: -1000, y: -1000, radius: 300, isDown: false, shockwave: 0 };
+
+        function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize);
+        window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
+        window.addEventListener('mousedown', () => { mouse.isDown = true; mouse.shockwave = 70; });
+        window.addEventListener('mouseup', () => { mouse.isDown = false; });
+        resize();
+
+        for (let i = 0; i < 150; i++) {
+            particles.push({ 
+                x: Math.random() * w, 
+                y: Math.random() * h, 
+                vx: (Math.random() - 0.5) * 1.5, 
+                vy: (Math.random() - 0.5) * 1.5,
+                baseSize: Math.random() * 2 + 1.5,
+                color: Math.random() > 0.5 ? '255, 123, 0' : '2, 132, 199', // Orange & Blue
+                density: (Math.random() * 30) + 1,
+                friction: 0.94
+            });
+        }
+
+        function anim() {
+            requestAnimationFrame(anim); 
+            ctx.fillStyle = 'rgba(9, 13, 22, 0.35)'; // Motion blur trail
+            ctx.fillRect(0, 0, w, h);
+            
+            if(mouse.shockwave > 0) mouse.shockwave -= 2.5;
+
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                
+                // Click Shockwave Repulsion
+                if (mouse.shockwave > 0) {
+                    let dx = p.x - mouse.x, dy = p.y - mouse.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 450 && dist > 0) {
+                        let force = (450 - dist) / 450;
+                        p.vx += (dx/dist) * force * 18;
+                        p.vy += (dy/dist) * force * 18;
+                    }
+                }
+
+                let dx = mouse.x - p.x, dy = mouse.y - p.y, dist = Math.sqrt(dx*dx + dy*dy);
+                let size = p.baseSize;
+
+                // Magnetic Cursor Attraction
+                if (dist < mouse.radius) {
+                    let force = (mouse.radius - dist) / mouse.radius;
+                    if (mouse.isDown) {
+                        p.vx -= (dx / dist) * force * 2;
+                        p.vy -= (dy / dist) * force * 2;
+                    } else {
+                        p.vx += (dx / dist) * force * p.density * 0.08;
+                        p.y += (dy / dist) * force * p.density * 0.08;
+                        size += force * 4.5; 
+                    }
+
+                    ctx.beginPath(); 
+                    ctx.strokeStyle = `rgba(${p.color}, ${force * 0.7})`; 
+                    ctx.lineWidth = force * 2.5;
+                    ctx.moveTo(p.x, p.y); 
+                    ctx.lineTo(mouse.x, mouse.y); 
+                    ctx.stroke();
+                }
+
+                p.vx *= p.friction; p.vy *= p.friction;
+                if(Math.abs(p.vx) < 0.2) p.vx += (Math.random()-0.5)*0.3;
+                if(Math.abs(p.vy) < 0.2) p.vy += (Math.random()-0.5)*0.3;
+                p.x += p.vx; p.y += p.vy;
+                
+                if (p.x < -50) p.x = w + 50; if (p.x > w + 50) p.x = -50; 
+                if (p.y < -50) p.y = h + 50; if (p.y > h + 50) p.y = -50; 
+
+                // Draw Core Particle
+                ctx.beginPath(); 
+                ctx.arc(p.x, p.y, size, 0, Math.PI*2); 
+                ctx.fillStyle = `rgba(${p.color}, 0.9)`; 
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = `rgba(${p.color}, 1)`;
+                ctx.fill();
+                ctx.shadowBlur = 0; 
+
+                // Network Interconnections
+                for (let j = i + 1; j < particles.length; j++) {
+                    let p2 = particles[j];
+                    let dx2 = p.x - p2.x, dy2 = p.y - p2.y, dist2 = Math.sqrt(dx2*dx2 + dy2*dy2);
+                    if (dist2 < 140) {
+                        ctx.beginPath(); 
+                        let gradient = ctx.createLinearGradient(p.x, p.y, p2.x, p2.y);
+                        gradient.addColorStop(0, `rgba(${p.color}, ${(1 - dist2 / 140) * 0.6})`);
+                        gradient.addColorStop(1, `rgba(${p2.color}, ${(1 - dist2 / 140) * 0.6})`);
+                        ctx.strokeStyle = gradient; 
+                        ctx.lineWidth = 1.5;
+                        ctx.moveTo(p.x, p.y); 
+                        ctx.lineTo(p2.x, p2.y); 
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+        anim();
+    }
+
+    /* Core Backend Processing Logic */
     async function fetchVideoInfo() {
         currentUrl = document.getElementById('urlInput').value;
-        if (!currentUrl) return alert("Please enter a URL");
+        if (!currentUrl) return alert("Please enter a valid YouTube URL");
 
         document.getElementById('loading').classList.remove('hidden');
         document.getElementById('resultContainer').classList.add('hidden');
+        setCinematicBlur(true); 
 
         try {
             let response = await fetch('/get-info', {
@@ -274,6 +538,7 @@
 
             let data = await response.json();
             document.getElementById('loading').classList.add('hidden');
+            setCinematicBlur(false);
 
             if (data.error) {
                 alert("Error: " + data.error);
@@ -296,6 +561,7 @@
             document.getElementById('resultContainer').classList.remove('hidden');
         } catch (err) {
             document.getElementById('loading').classList.add('hidden');
+            setCinematicBlur(false);
             alert("Failed to connect to server.");
         }
     }
@@ -310,7 +576,8 @@
         
         progressContainer.classList.remove('hidden');
         progressBar.style.width = '0%';
-        progressText.innerText = 'Connecting streams... 0%';
+        progressText.innerText = 'Connecting to stream matrix... 0%';
+        progressText.style.color = '#34d399';
 
         try {
             let resp = await fetch('/start-download', {
@@ -334,23 +601,25 @@
                 if (pData.status === 'downloading') {
                     let pct = pData.progress.toFixed(1);
                     progressBar.style.width = pct + '%';
-                    progressText.innerText = `Downloading stream... ${pct}%`;
+                    progressText.innerText = `Downloading high-speed streams... ${pct}%`;
                 } else if (pData.status === 'processing') {
                     progressBar.style.width = '100%';
-                    progressText.innerText = `Merging video and audio streams via FFmpeg...`;
+                    progressText.innerText = `Merging streams via FFmpeg Engine...`;
                 } else if (pData.status === 'completed') {
                     clearInterval(pollInterval);
                     progressBar.style.width = '100%';
-                    progressText.innerText = `Download Complete! Saving file...`;
+                    progressText.innerText = `✅ Extraction Complete! Initializing save...`;
                     
                     setTimeout(() => {
                         window.location.href = `/get-file/${taskId}`;
                         progressContainer.classList.add('hidden');
-                    }, 1200);
+                    }, 1500);
                 } else if (pData.status === 'error') {
                     clearInterval(pollInterval);
                     alert("Download failed: " + pData.error);
-                    progressContainer.classList.add('hidden');
+                    progressText.innerText = `❌ Error: Extraction failed.`;
+                    progressText.style.color = '#ef4444';
+                    progressBar.style.background = '#ef4444';
                 }
             }, 500);
 
@@ -370,7 +639,14 @@
         document.getElementById('videoTitle').innerText = "";
         document.getElementById('videoDuration').innerText = "";
         document.getElementById('formatSelect').innerHTML = "";
+        setCinematicBlur(false);
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initCanvasMesh();
+        initSpotlightButtons();
+        init3DAppleCards();
+    });
 </script>
 
 </body>
