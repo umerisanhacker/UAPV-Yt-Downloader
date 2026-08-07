@@ -21,19 +21,22 @@ def get_info():
         return jsonify({'error': 'No URL provided'}), 400
 
     try:
-        # AGGRESSIVE BOT BYPASS: Force mobile/TV clients and inject real user agents
+        # AGGRESSIVE BOT BYPASS: Kill the 'web' client completely and spoof Android/iOS
         ydl_opts = {
             'quiet': True, 
             'no_warnings': True,
             'extract_flat': False,
+            'geo_bypass': True,
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'ios', 'tv_embedded', 'web']
+                    'player_skip': ['web', 'web_embedded'],
+                    'player_client': ['android', 'ios', 'tv_embedded']
                 }
             },
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Sec-Fetch-Mode': 'navigate'
             }
         }
         
@@ -121,11 +124,12 @@ def run_download(task_id, url, format_id, file_type):
             'no_warnings': True,
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'ios', 'tv_embedded', 'web']
+                    'player_skip': ['web', 'web_embedded'],
+                    'player_client': ['android', 'ios', 'tv_embedded']
                 }
             },
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
             }
         }
         
