@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UAPV YouTube Downloader Pro</title>
+    <!-- Links to the new manifest route in app.py -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0b0818">
     
@@ -30,7 +31,6 @@
             min-height: 100vh;
             overflow-x: hidden;
             position: relative;
-            /* perspective removed from body to fix fixed-background scroll bug */
             padding-bottom: 100px;
         }
 
@@ -47,6 +47,10 @@
         .nav-links { display: flex; gap: 20px; align-items: center; list-style: none; flex-wrap: wrap; }
         .nav-links a { color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: color 0.2s, text-shadow 0.2s; cursor: pointer; }
         .nav-links a:hover { color: #fff; text-shadow: 0 0 10px rgba(255, 123, 0, 0.6); }
+
+        /* Get App PWA Button */
+        .btn-get-app { background: linear-gradient(135deg, #10b981, #059669); color: #fff; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; border: none; cursor: pointer; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); display: none; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-get-app:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(16, 185, 129, 0.6); }
 
         /* Cinematic Wrapper */
         #main-wrapper { width: 100%; max-width: 1200px; margin: 0 auto; padding: 40px 20px; transition: filter 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); perspective: 1200px; }
@@ -185,6 +189,8 @@
         <li><a onclick="document.getElementById('main-card').scrollIntoView({behavior:'smooth'})">Downloader</a></li>
         <li><a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Features</a></li>
         <li><a onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})">FAQ</a></li>
+        <!-- PWA "Get App" Button -->
+        <li><button id="installAppBtn" class="btn-get-app btn-spotlight" onclick="installPWA()">⬇️ GET APP</button></li>
     </ul>
 </nav>
 
@@ -233,7 +239,7 @@
         </div>
     </div>
 
-    <!-- NEW FEATURES GRID SECTION -->
+    <!-- FEATURES GRID SECTION -->
     <h2 class="section-title" id="features">✨ Pro Extraction Features</h2>
     <div class="cards-grid">
         <div class="tool-card">
@@ -334,6 +340,35 @@
 
 <script>
     let currentUrl = "";
+    
+    /* PWA Get App Logic */
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        // Update UI to notify the user they can add to home screen
+        const installBtn = document.getElementById('installAppBtn');
+        if (installBtn) {
+            installBtn.style.display = 'block';
+        }
+    });
+
+    function installPWA() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the PWA prompt');
+                    document.getElementById('installAppBtn').style.display = 'none';
+                } else {
+                    console.log('User dismissed the PWA prompt');
+                }
+                deferredPrompt = null;
+            });
+        }
+    }
 
     /* Cinematic Depth UI Logic */
     function setCinematicBlur(active) {
