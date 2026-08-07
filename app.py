@@ -8,6 +8,18 @@ import yt_dlp
 app = Flask(__name__)
 download_progress = {}
 
+# ==============================================================================
+# 🛡️ THE BULLETPROOF RENDER FIX: REBUILD COOKIES FROM ENVIRONMENT VARIABLE
+# Render deletes local files when the server sleeps. This script reconstructs 
+# your YouTube authentication cookies directly from Render's secure memory 
+# every single time the app boots up, permanently bypassing the IP ban.
+# ==============================================================================
+youtube_cookies_env = os.environ.get('YOUTUBE_COOKIES', '')
+if youtube_cookies_env:
+    with open('cookies.txt', 'w', encoding='utf-8') as f:
+        f.write(youtube_cookies_env.replace('\\n', '\n'))
+# ==============================================================================
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -21,12 +33,11 @@ def get_info():
         return jsonify({'error': 'No URL provided'}), 400
 
     try:
-        # AGGRESSIVE BOT BYPASS: Kill the 'web' client completely and spoof Android/iOS
+        # AGGRESSIVE BOT BYPASS
         ydl_opts = {
             'quiet': True, 
             'no_warnings': True,
             'extract_flat': False,
-            'geo_bypass': True,
             'extractor_args': {
                 'youtube': {
                     'player_skip': ['web', 'web_embedded'],
@@ -36,11 +47,10 @@ def get_info():
             'http_headers': {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                 'Accept-Language': 'en-US,en;q=0.9',
-                'Sec-Fetch-Mode': 'navigate'
             }
         }
         
-        # If a cookies file is present, use it to permanently bypass IP bans
+        # Inject the reconstructed cookies file
         if os.path.exists('cookies.txt'):
             ydl_opts['cookiefile'] = 'cookies.txt'
 
@@ -133,6 +143,7 @@ def run_download(task_id, url, format_id, file_type):
             }
         }
         
+        # Inject the reconstructed cookies file
         if os.path.exists('cookies.txt'):
             ydl_opts['cookiefile'] = 'cookies.txt'
 
